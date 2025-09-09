@@ -1,131 +1,65 @@
-import React, { useState } from "react";
-import { questions } from "../data.js";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { questions } from "../data";
+import QuestionCard from "./QuestionCard";
 
-function Quiz() {
-  const [current, setCurrent] = useState(0); // current question index
-  const [score, setScore] = useState(0); // user score
-  const [selected, setSelected] = useState(""); // selected option
-  const [showResult, setShowResult] = useState(false);
+export default function Quiz() {
+  const [currentQ, setCurrentQ] = useState(0);
+  const [score, setScore] = useState(0);
+  const [selected, setSelected] = useState(null); // store selected answer
+  const [timeLeft, setTimeLeft] = useState(15); // timer per question
+  const navigate = useNavigate();
 
-  const handleOptionClick = (option) => {
-    setSelected(option);
+  // Timer countdown
+  useEffect(() => {
+    if (timeLeft <= 0) {
+      handleNext(); // auto move if time runs out
+      return;
+    }
+
+    const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [timeLeft]);
+
+  const handleAnswer = (answer) => {
+    if (selected) return; // prevent multiple clicks
+    setSelected(answer);
+
+    if (answer === questions[currentQ].answer) {
+      setScore((prev) => prev + 1);
+    }
+
+    // move to next after 1.2s
+    setTimeout(handleNext, 1200);
   };
 
   const handleNext = () => {
-    if (selected) {
-      if (selected === questions[current].answer) {
-        setScore(score + 1);
-      }
-
-      if (current + 1 < questions.length) {
-        setCurrent(current + 1);
-        setSelected("");
-      } else {
-        setShowResult(true);
-      }
+    const nextQ = currentQ + 1;
+    if (nextQ < questions.length) {
+      setCurrentQ(nextQ);
+      setSelected(null);
+      setTimeLeft(15); // reset timer
     } else {
-      alert("Please select an option!");
+      navigate("/result", { state: { score, total: questions.length } });
     }
   };
 
-  const handleRestart = () => {
-    setCurrent(0);
-    setScore(0);
-    setSelected("");
-    setShowResult(false);
-  };
-
   return (
-    <div style={styles.container}>
-      <h1 style={styles.heading}>Quiz App</h1>
+    <div className="quiz">
+      <div className="quiz-header">
+        <h1>Quiz Time</h1>
+        <div className="timer">⏳ {timeLeft}s</div>
+      </div>
 
-      {showResult ? (
-        <div style={styles.resultBox}>
-          <h2>Your Score: {score} / {questions.length}</h2>
-          <button style={styles.button} onClick={handleRestart}>Restart Quiz</button>
-        </div>
-      ) : (
-        <div style={styles.quizBox}>
-          <h2>
-            Question {current + 1} of {questions.length}
-          </h2>
-          <p style={styles.question}>{questions[current].question}</p>
+      <QuestionCard
+        questionData={questions[currentQ]}
+        handleAnswer={handleAnswer}
+        selected={selected}
+      />
 
-          <div>
-            {questions[current].options.map((option, index) => (
-              <button
-                key={index}
-                onClick={() => handleOptionClick(option)}
-                style={{
-                  ...styles.option,
-                  backgroundColor: selected === option ? "#87ceeb" : "#f0f0f0",
-                }}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-
-          <button style={styles.button} onClick={handleNext}>
-            {current === questions.length - 1 ? "Submit" : "Next"}
-          </button>
-        </div>
-      )}
+      <p>
+        Question {currentQ + 1} / {questions.length}
+      </p>
     </div>
   );
 }
-
-const styles = {
-  container: {
-    textAlign: "center",
-    padding: "20px",
-    fontFamily: "Arial",
-  },
-  heading: {
-    fontSize: "28px",
-    marginBottom: "20px",
-  },
-  quizBox: {
-    border: "2px solid #ddd",
-    borderRadius: "10px",
-    padding: "20px",
-    maxWidth: "500px",
-    margin: "auto",
-    backgroundColor: "#fafafa",
-  },
-  question: {
-    fontSize: "20px",
-    marginBottom: "15px",
-  },
-  option: {
-    display: "block",
-    width: "100%",
-    padding: "10px",
-    margin: "8px 0",
-    cursor: "pointer",
-    borderRadius: "5px",
-    border: "1px solid #ccc",
-    fontSize: "16px",
-  },
-  button: {
-    marginTop: "15px",
-    padding: "10px 20px",
-    fontSize: "16px",
-    cursor: "pointer",
-    borderRadius: "5px",
-    backgroundColor: "#4CAF50",
-    color: "white",
-    border: "none",
-  },
-  resultBox: {
-    border: "2px solid #ddd",
-    borderRadius: "10px",
-    padding: "20px",
-    maxWidth: "400px",
-    margin: "auto",
-    backgroundColor: "#eafbea",
-  },
-};
-
-
-export default Quiz;
